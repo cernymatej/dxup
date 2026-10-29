@@ -110,6 +110,26 @@ describe("named layout slots navigation", () => {
     expect(recorded.getTypes()).not.toContain("sidebar:unmounted");
   });
 
+  it("should not show the slot of a parent page before its child page settles", async () => {
+    const recorded = recordEvents();
+    await navigateTo("/parent");
+    await waitForPendingPage("parent-child");
+
+    // the parent page has rendered, but the previous page is still shown while its child is pending
+    expect(wrapper.find(`[data-testid="page-home"]`).exists()).toBe(true);
+    expect(wrapper.find(`[data-testid="aside"]`).exists()).toBe(false);
+    for (const event of recorded.ofType("slots")) {
+      expect(event.keys).not.toContain("aside");
+    }
+
+    // the slot appears together with the page content
+    releasePage("parent-child");
+    await vi.waitFor(() => {
+      expect(wrapper.find(`[data-testid="page-parent-child"]`).exists()).toBe(true);
+      expect(wrapper.find(`[data-testid="aside"]`).text()).toContain("Parent aside");
+    });
+  });
+
   it("should hide the page slot when the next page does not provide one", async () => {
     await openPageWithSlot(1);
 
